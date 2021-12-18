@@ -109,7 +109,7 @@ func Cleanup() {
 	heaplock.Lock()
 	defer heaplock.Unlock()
 
-	ms := time.Now().UnixMilli()
+	ms := UnixMilli(time.Now())
 
 	for timeouts[0].t+MAX_TIMEOUT < ms {
 		delete(hits, timeouts[0].snowflake)
