@@ -1,6 +1,6 @@
 module github.com/erikmcclure/log4fail
 
-go 1.17
+go 1.16
 
 require github.com/miekg/dns v1.1.43
 require github.com/gorilla/mux v1.8.0

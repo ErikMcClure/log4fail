@@ -75,9 +75,13 @@ func ServeDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 const MachineID uint8 = 1
 
+func UnixMilli(t time.Time) int64 {
+	return t.Unix()*1e3 + int64(t.Nanosecond())/1e6
+}
+
 func AddSubzone() (uint64, uint64) {
 	// Create simplified snowflake
-	ms := time.Now().UnixMilli()
+	ms := UnixMilli(time.Now())
 	var id uint64 = uint64(ms) & 0xFFFFF
 	id = id | (uint64(MachineID) << 40)
 	id = id | (uint64(atomic.AddUint32(&counter, 1)&0xFF) << 48)
